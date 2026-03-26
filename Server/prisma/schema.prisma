@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────────
+// ENUMS
+// ──────────────────────────────────────────────────
+
+enum SDELevel {
+  SDE_1
+  SDE_2
+  SDE_3
+  SDE_4
+}
+
+enum DevRole {
+  FRONTEND
+  BACKEND
+  FULL_STACK
+  DEVOPS
+  MOBILE
+}
+
+enum CompanyType {
+  FAANG
+  STARTUP
+  MNC
+  FINTECH
+  PRODUCT
+}
+
+enum Plan {
+  FREE
+  PRO
+  PREMIUM
+  TEAM
+}
+
+enum RoundType {
+  APTITUDE
+  DSA_BASIC
+  DSA_MEDIUM
+  DSA_HARD
+  HR
+  LLD
+  HLD
+  BEHAVIOURAL
+  TECH_FUNDAMENTALS
+  TECH_DEEP_DIVE
+  HIRING_MANAGER
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  PAUSED
+}
+
+enum RoundStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum QuestionType {
+  MCQ
+  CODING
+  VOICE
+  TEXT
+  DESIGN
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// ──────────────────────────────────────────────────
+// MODELS
+// ──────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String?
+  avatar       String?
+  provider     String    @default("email")
+  providerId   String?
+  level        SDELevel  @default(SDE_1)
+  role         DevRole   @default(FULL_STACK)
+  targetCompany String?
+  plan         Plan      @default(FREE)
+  planExpiry   DateTime?
+  isAdmin      Boolean   @default(false)
+
+  sessions InterviewSession[]
+  profile  UserProfile?
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model InterviewSession {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level        SDELevel
+  role         DevRole
+  companyType  CompanyType
+  companyName  String?
+  status       SessionStatus @default(IN_PROGRESS)
+  currentRound Int           @default(1)
+  totalRounds  Int
+  startedAt    DateTime      @default(now())
+  completedAt  DateTime?
+  lastSavedAt  DateTime      @default(now())
+  rounds       Round[]
+  finalScore   Float?
+  percentile   Float?
+  feedback     String?       @db.Text
+
+  @@index([userId, status])
+  @@index([userId, startedAt])
+}
+
+model Round {
+  id          String      @id @default(cuid())
+  sessionId   String
+  session     InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  roundNumber Int
+  type        RoundType
+  status      RoundStatus @default(NOT_STARTED)
+  score       Float?
+  maxScore    Float       @default(100)
+  startedAt   DateTime?
+  completedAt DateTime?
+  timeTaken   Int?        // seconds
+  questions   Question[]
+
+  @@index([sessionId])
+  @@unique([sessionId, roundNumber])
+}
+
+model Question {
+  id              String       @id @default(cuid())
+  roundId         String
+  round           Round        @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  questionNumber  Int
+  type            QuestionType
+  content         String       @db.Text
+  metadata        Json?        // hints, test cases, difficulty, topic
+  userAnswer      String?      @db.Text
+  codeAnswer      String?      @db.Text
+  voiceTranscript String?      @db.Text
+  aiEvaluation    Json?        // Full AI evaluation response
+  score           Float?
+  maxScore        Float        @default(100)
+  hintsUsed       Int          @default(0)
+  skipped         Boolean      @default(false)
+  answeredAt      DateTime?
+
+  @@index([roundId])
+}
+
+model UserProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalSessions  Int      @default(0)
+  totalTimeMin   Int      @default(0)
+  averageScore   Float?
+  dsaScore       Float?
+  lldScore       Float?
+  hldScore       Float?
+  hrScore        Float?
+  aptitudeScore  Float?
+  weakAreas      String[]
+  strongAreas    String[]
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActiveDate DateTime?
+  badges         String[]
+  updatedAt      DateTime @updatedAt
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?
+  amount            Int           // in paise
+  currency          String        @default("INR")
+  plan              Plan
+  status            PaymentStatus @default(PENDING)
+  createdAt         DateTime      @default(now())
+
+  @@index([userId])
+}
