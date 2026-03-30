@@ -30,6 +30,9 @@ const envSchema = z.object({
   // Frontend URL (CORS)
   FRONTEND_URL: z.string().default('http://localhost:5173'),
 
+  // App URL (Self-ping)
+  APP_URL: z.string().default(''),
+
   // Admin emails (comma-separated)
   ADMIN_EMAILS: z.string().default('admin@interviewai.com'),
 });

@@ -13,6 +13,7 @@ import { initAIProviders } from './config/ai.js';
 import { initQueues } from './config/queue.js';
 import { startGenerationWorker, getGenerationWorker } from './workers/generation.worker.js';
 import { startEvaluationWorker, getEvaluationWorker } from './workers/evaluation.worker.js';
+import { startSelfPinger } from './lib/pinger.js';
 
 const PORT = env.PORT;
 
@@ -44,6 +45,11 @@ async function bootstrap() {
       logger.info(`📊 Environment: ${env.NODE_ENV}`);
       logger.info(`🌐 Frontend URL: ${env.FRONTEND_URL}`);
       logger.info(`🔗 Health check: http://localhost:${PORT}/api/v1/health`);
+
+      // Start self-pinger in production to prevent Render sleep
+      if (env.NODE_ENV === 'production' && env.APP_URL) {
+        startSelfPinger(env.APP_URL);
+      }
     });
 
     // Graceful shutdown
