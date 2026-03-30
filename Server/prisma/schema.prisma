@@ -1,9 +1,11 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")   // 👈 add this
 }
 
 // ──────────────────────────────────────────────────
@@ -187,16 +189,13 @@ model UserProfile {
   hrScore        Float?
   aptitudeScore  Float?
 
-  // 🔥 CHANGE THIS
- weakAreas      Json     @default("[]")
-strongAreas    Json     @default("[]")
-badges         Json     @default("[]")
+weakAreas   Json @default(dbgenerated("'[]'"))
+strongAreas Json @default(dbgenerated("'[]'"))
+badges      Json @default(dbgenerated("'[]'"))
 
   currentStreak  Int      @default(0)
   longestStreak  Int      @default(0)
   lastActiveDate DateTime?
-
- 
 
   updatedAt      DateTime @updatedAt
 }
